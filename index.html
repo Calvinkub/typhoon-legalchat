@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typhoon AI Chat - ผู้ช่วยด้านสถาปัตยกรรมและผังเมือง</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 1rem;
+            gap: 1rem;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            text-align: right;
+        }
+
+        .message.assistant {
+            text-align: left;
+        }
+
+        .message-content {
+            display: inline-block;
+            max-width: 80%;
+            padding: 1rem 1.25rem;
+            border-radius: 18px;
+            word-wrap: break-word;
+            line-height: 1.5;
+            position: relative;
+        }
+
+        .user .message-content {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .assistant .message-content {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-container {
+            display: flex;
+            gap: 0.75rem;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .message-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .send-button {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .send-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #666;
+            font-style: italic;
+        }
+
+        .loading-dots {
+            display: inline-flex;
+            gap: 2px;
+        }
+
+        .loading-dots span {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #667eea;
+            animation: pulse 1.4s ease-in-out infinite both;
+        }
+
+        .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes pulse {
+            0%, 80%, 100% { 
+                transform: scale(0);
+                opacity: 0.5;
+            }
+            40% { 
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .error {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24) !important;
+            color: white !important;
+        }
+
+        .api-config {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+        }
+
+        .api-config input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-top: 0.5rem;
+        }
+
+        .api-config label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+            }
+            
+            .chat-container {
+                padding: 0.5rem;
+            }
+            
+            .message-content {
+                max-width: 90%;
+            }
+            
+            .input-container {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .send-button {
+                align-self: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏗️ Typhoon AI Chat</h1>
+        <p>ผู้ช่วยด้านสถาปัตยกรรม ผังเมือง และกฎหมายควบคุมอาคาร</p>
+    </div>
+
+    <div class="chat-container">
+        <div class="api-config">
+            <label for="apiKey">API Key:</label>
+            <input type="password" id="apiKey" placeholder="กรอก API Key ของคุณ" value="">
+        </div>
+
+        <div class="messages" id="messages">
+            <div class="message assistant">
+                <div class="message-content">
+                    สวัสดีครับ! 🙏 ผมคือผู้ช่วย AI ด้านสถาปัตยกรรมและผังเมือง พร้อมช่วยเหลือเรื่อง:
+                    <br><br>
+                    📋 กฎหมายควบคุมอาคาร<br>
+                    🗺️ ผังเมืองรวมกรุงเทพฯ<br>
+                    📏 FAR, OSR, setbacks<br>
+                    🏢 ประเภทการใช้งานอาคาร<br>
+                    📐 ข้อจำกัดด้านความสูง<br>
+                    <br>
+                    กรุณาระบุที่อยู่หรือพิกัดที่ต้องการสอบถาม พร้อมประเภทอาคารที่ต้องการสร้างครับ
+                </div>
+            </div>
+        </div>
+
+        <div class="input-container">
+            <input 
+                type="text" 
+                class="message-input" 
+                id="messageInput" 
+                placeholder="พิมพ์คำถามเกี่ยวกับกฎหมายอาคารหรือผังเมือง..."
+                autocomplete="off"
+            >
+            <button class="send-button" id="sendButton">ส่ง</button>
+        </div>
+    </div>
+
+    <script>
+        class TyphoonChat {
+            constructor() {
+                this.messages = [];
+                this.isLoading = false;
+                this.endpoint = 'https://api.opentyphoon.ai/v1/chat/completions';
+                
+                this.messagesContainer = document.getElementById('messages');
+                this.messageInput = document.getElementById('messageInput');
+                this.sendButton = document.getElementById('sendButton');
+                this.apiKeyInput = document.getElementById('apiKey');
+                
+                this.initializeEventListeners();
+                this.initializeMessages();
+            }
+
+            initializeEventListeners() {
+                this.sendButton.addEventListener('click', () => this.sendMessage());
+                this.messageInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                });
+            }
+
+            initializeMessages() {
+                this.messages = [
+                    {
+                        role: "system", 
+                        content: "You are a Thai. Your job is to assist architects, urban planners. Interpreting zoning regulations (ผังเมืองรวมกรุงเทพฯ), building control law (พระราชบัญญัติควบคุมอาคาร), FAR (Floor Area Ratio), OSR (Open Space Ratio), setbacks, height restrictions, usage types (permitted and prohibited). Always cite the zone type (สีผังเมือง) when possible. User Already know General Laws. We need to Tell them specific laws on that Area look for map หากฎหมายในแต่ละเขตนั้นๆ กฎหมายเจาะจง กฎหมายเฉพาะพื้นที่ที่ได้รับมา เช่น กฎหมายแขวงตลิ่งชัน และกฎหมายในพื้นที่เขตนั้นๆ ต้องเว้นระยะห่างจากถนนเท่าไหร่ ต้องเว้นระยะห่างจากตึกข้างเคียงเท่าไหร่. บอกได้ว่าทำคอนโดได้ไหม ทำอาคารพาณิชย์ได้ไหม ทำโรงแรมได้ไหม ทำบ้านเดี่ยว บ้านแฝด ทาวน์เฮ้าส์ได้ไหม. บอกได้ว่าทำที่จอดรถได้กี่คัน. บอกได้ว่าทำสวนสาธารณะได้ไหม. บอกได้ว่าทำอาคารพาณิชย์สูงสุดกี่ชั้น. บอกได้ว่าทำอาคารสูงสุดกี่เมตร."
+                    }
+                ];
+            }
+
+            async sendMessage() {
+                const message = this.messageInput.value.trim();
+                const apiKey = this.apiKeyInput.value.trim();
+                
+                if (!message) return;
+                if (!apiKey) {
+                    this.showError('กรุณากรอก API Key');
+                    return;
+                }
+
+                this.addMessage('user', message);
+                this.messageInput.value = '';
+                this.setLoading(true);
+
+                try {
+                    const response = await this.callTyphoonAPI(message, apiKey);
+                    this.addMessage('assistant', response);
+                } catch (error) {
+                    console.error('Error:', error);
+                    this.addMessage('assistant', 'ขออภัย เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง', true);
+                }
+
+                this.setLoading(false);
+            }
+
+            async callTyphoonAPI(userMessage, apiKey) {
+                this.messages.push({role: "user", content: userMessage});
+
+                const payload = {
+                    model: "typhoon-v2.1-12b-instruct",
+                    max_tokens: 1024,
+                    messages: this.messages,
+                    temperature: 0.7,
+                    top_p: 0.95,
+                    top_k: 0,
+                    repetition_penalty: 1.05,
+                    min_p: 0
+                };
+
+                const headers = {
+                    "Authorization": `Bearer ${apiKey}`,
+                    "Content-Type": "application/json"
+                };
+
+                const response = await fetch(this.endpoint, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const result = await response.json();
+                const assistantMessage = result.choices[0].message.content;
+                
+                this.messages.push({role: "assistant", content: assistantMessage});
+                
+                return assistantMessage;
+            }
+
+            addMessage(role, content, isError = false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${role}`;
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = `message-content${isError ? ' error' : ''}`;
+                contentDiv.innerHTML = this.formatMessage(content);
+                
+                messageDiv.appendChild(contentDiv);
+                this.messagesContainer.appendChild(messageDiv);
+                
+                this.scrollToBottom();
+            }
+
+            formatMessage(content) {
+                return content
+                    .replace(/\n/g, '<br>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>');
+            }
+
+            setLoading(loading) {
+                this.isLoading = loading;
+                this.sendButton.disabled = loading;
+                this.messageInput.disabled = loading;
+
+                if (loading) {
+                    this.sendButton.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+                    this.addLoadingMessage();
+                } else {
+                    this.sendButton.textContent = 'ส่ง';
+                    this.removeLoadingMessage();
+                }
+            }
+
+            addLoadingMessage() {
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'message assistant';
+                loadingDiv.id = 'loading-message';
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content loading';
+                contentDiv.innerHTML = 'กำลังประมวลผล <div class="loading-dots"><span></span><span></span><span></span></div>';
+                
+                loadingDiv.appendChild(contentDiv);
+                this.messagesContainer.appendChild(loadingDiv);
+                this.scrollToBottom();
+            }
+
+            removeLoadingMessage() {
+                const loadingMessage = document.getElementById('loading-message');
+                if (loadingMessage) {
+                    loadingMessage.remove();
+                }
+            }
+
+            showError(message) {
+                this.addMessage('assistant', message, true);
+            }
+
+            scrollToBottom() {
+                setTimeout(() => {
+                    this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+                }, 100);
+            }
+        }
+
+        // Initialize the chat application
+        document.addEventListener('DOMContentLoaded', () => {
+            new TyphoonChat();
+        });
+    </script>
+</body>
+</html>
